@@ -55,9 +55,6 @@ export const useGameAudio = () => {
         backgroundMusicRef.current.pause();
         backgroundMusicRef.current = null;
       }
-      consequenceSounds.current.forEach(audio => {
-        audio.pause();
-      });
     };
   }, []);
 
