@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, Save, RotateCcw, ChevronLeft, ChevronRight, Heart, Zap, Moon, Users, BarChart3, User, ArrowLeft, Tv, Phone, Refrigerator, ChefHat, Bed, Monitor, BookOpen, ShowerHead as Shower, Carrot as Mirror, Dumbbell, Activity } from 'lucide-react';
+import { Play, Pause, Save, RotateCcw, ChevronLeft, ChevronRight, Heart, Zap, Moon, Users, BarChart3, User, ArrowLeft, Tv, Phone, Refrigerator, ChefHat, Bed, Monitor, BookOpen, ShowerHead as Shower, Carrot as Mirror, Dumbbell, Activity, Volume2, VolumeX } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme';
 import { useProfilePicture } from '../../hooks/useProfilePicture';
+import { useGameAudio } from '../../hooks/useGameAudio';
 
 interface MobileGameInterfaceProps {
   onBack: () => void;
@@ -46,6 +47,13 @@ interface RoomObject {
 const MobileGameInterface: React.FC<MobileGameInterfaceProps> = ({ onBack }) => {
   const { isDark } = useTheme();
   const { profilePicture, hasProfilePicture } = useProfilePicture();
+  const { 
+    audioSettings, 
+    toggleMute, 
+    playButtonSound, 
+    playNavigationSound, 
+    playRandomConsequenceSound 
+  } = useGameAudio();
   
   const [gameState, setGameState] = useState<GameState>({
     day: 1,
@@ -301,6 +309,7 @@ const MobileGameInterface: React.FC<MobileGameInterfaceProps> = ({ onBack }) => 
   const handleRoomChange = (direction: 'prev' | 'next') => {
     if (isTransitioning || showPauseScreen) return;
     
+    playNavigationSound();
     setIsTransitioning(true);
     
     setGameState(prev => ({
@@ -314,6 +323,7 @@ const MobileGameInterface: React.FC<MobileGameInterfaceProps> = ({ onBack }) => 
   };
 
   const togglePlay = () => {
+    playButtonSound();
     if (gameState.isPlaying) {
       // Pausar o jogo
       setGameState(prev => ({ ...prev, isPlaying: false }));
@@ -326,12 +336,14 @@ const MobileGameInterface: React.FC<MobileGameInterfaceProps> = ({ onBack }) => 
   };
 
   const resumeGame = () => {
+    playButtonSound();
     setGameState(prev => ({ ...prev, isPlaying: true }));
     setShowPauseScreen(false);
   };
 
   const saveGame = () => {
     if (showPauseScreen) return;
+    playButtonSound();
     setShowSaveMessage(true);
     setTimeout(() => setShowSaveMessage(false), 2000);
     // Implementar lógica de salvamento aqui
@@ -339,6 +351,7 @@ const MobileGameInterface: React.FC<MobileGameInterfaceProps> = ({ onBack }) => 
 
   const resetGame = () => {
     if (showPauseScreen) return;
+    playButtonSound();
     setGameState({
       day: 1,
       hour: 8,
@@ -360,11 +373,14 @@ const MobileGameInterface: React.FC<MobileGameInterfaceProps> = ({ onBack }) => 
 
   const setGameSpeed = (speed: number) => {
     if (showPauseScreen) return;
+    playButtonSound();
     setGameState(prev => ({ ...prev, gameSpeed: speed }));
   };
 
   const handleObjectClick = (object: RoomObject) => {
     if (showPauseScreen) return;
+    
+    playNavigationSound();
     
     if (gameState.isPlaying) {
       setGameState(prev => ({ ...prev, isPlaying: false }));
@@ -399,6 +415,8 @@ const MobileGameInterface: React.FC<MobileGameInterfaceProps> = ({ onBack }) => 
 
   const handleActionConfirm = () => {
     if (!showModal.object) return;
+
+    playButtonSound();
 
     const { effects, consequence } = showModal.object.action;
     const timeJump = showModal.object.timeJump;
@@ -436,14 +454,23 @@ const MobileGameInterface: React.FC<MobileGameInterfaceProps> = ({ onBack }) => 
     setShowModal({ isOpen: false, object: null });
     setShowConsequence(consequence);
     
+    // Tocar som de consequência
+    playRandomConsequenceSound();
+    
     setTimeout(() => {
       setShowConsequence(null);
     }, 3000);
   };
 
   const handleActionCancel = () => {
+    playButtonSound();
     setShowModal({ isOpen: false, object: null });
     setGameState(prev => ({ ...prev, isPlaying: true })); // Retomar o jogo
+  };
+
+  const handleMuteToggle = () => {
+    playButtonSound();
+    toggleMute();
   };
 
   const currentRoom = rooms[gameState.currentRoom];
@@ -466,10 +493,13 @@ const MobileGameInterface: React.FC<MobileGameInterfaceProps> = ({ onBack }) => 
       }`}>
         <div className="h-full flex items-center justify-between">
           
-          {/* Lado Esquerdo - Controles do Jogo */}
-          <div className="flex items-center gap-1">
+          {/* Lado Esquerdo - Perfil do Alex */}
+          <div className="flex items-center gap-2">
             <button
-              onClick={onBack}
+              onClick={() => {
+                playButtonSound();
+                onBack();
+              }}
               disabled={showPauseScreen}
               className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${
                 showPauseScreen 
@@ -482,45 +512,6 @@ const MobileGameInterface: React.FC<MobileGameInterfaceProps> = ({ onBack }) => 
               <ArrowLeft className="w-4 h-4" />
             </button>
             
-            <button
-              onClick={togglePlay}
-              className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${
-                gameState.isPlaying && !showPauseScreen
-                  ? 'bg-red-500 hover:bg-red-600 text-white'
-                  : 'bg-emerald-500 hover:bg-emerald-600 text-white'
-              }`}
-            >
-              {gameState.isPlaying && !showPauseScreen ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-            </button>
-            
-            <button
-              onClick={saveGame}
-              disabled={showPauseScreen}
-              className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${
-                showPauseScreen 
-                  ? 'opacity-50 cursor-not-allowed' 
-                  : isDark 
-                    ? 'hover:bg-slate-800 text-emerald-400' 
-                    : 'hover:bg-gray-100 text-emerald-600'
-              }`}
-            >
-              <Save className="w-3 h-3" />
-            </button>
-            
-            <button
-              onClick={resetGame}
-              className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${
-                isDark 
-                  ? 'hover:bg-slate-800 text-orange-400' 
-                  : 'hover:bg-gray-100 text-orange-600'
-              }`}
-            >
-              <RotateCcw className="w-3 h-3" />
-            </button>
-          </div>
-
-          {/* Centro - Perfil do Alex */}
-          <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-emerald-500/30">
               {hasProfilePicture ? (
                 <img
@@ -534,7 +525,7 @@ const MobileGameInterface: React.FC<MobileGameInterfaceProps> = ({ onBack }) => 
                 </div>
               )}
             </div>
-            <div className="text-center">
+            <div className="text-left">
               <div className={`text-sm font-bold transition-colors duration-300 ${
                 isDark ? 'text-white' : 'text-gray-900'
               }`}>
@@ -545,41 +536,57 @@ const MobileGameInterface: React.FC<MobileGameInterfaceProps> = ({ onBack }) => 
               }`}>
                 {weekDays[(gameState.day - 1) % 7]}
               </div>
+            </div>
+          </div>
+
+          {/* Centro - Controles do Jogo */}
+          <div className="flex flex-col items-center gap-1">
+            <button
+              onClick={togglePlay}
+              className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${
+                gameState.isPlaying && !showPauseScreen
+                  ? 'bg-red-500 hover:bg-red-600 text-white'
+                  : 'bg-emerald-500 hover:bg-emerald-600 text-white'
+              }`}
+            >
+              {gameState.isPlaying && !showPauseScreen ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+            </button>
+            
+            {/* Pontuação e Tempo */}
+            <div className="text-center">
               <div className={`text-xs font-mono transition-colors duration-300 ${
                 isDark ? 'text-emerald-400' : 'text-emerald-600'
               }`}>
                 {formatTime(gameState.hour, gameState.minute)}
               </div>
+              <div className={`text-xs font-bold transition-colors duration-300 ${
+                isDark ? 'text-emerald-400' : 'text-emerald-600'
+              }`}>
+                {gameState.score.toLocaleString()}
+              </div>
             </div>
           </div>
 
-          {/* Lado Direito - Velocidade e Pontuação */}
-          <div className="flex flex-col items-end gap-1">
-            <div className="flex items-center gap-1">
-              {[1, 2, 4].map((speed) => (
-                <button
-                  key={speed}
-                  onClick={() => setGameSpeed(speed)}
-                  disabled={showPauseScreen}
-                  className={`px-2 py-1 rounded text-xs font-bold transition-all duration-200 ${
-                    showPauseScreen 
-                      ? 'opacity-50 cursor-not-allowed' 
-                      : gameState.gameSpeed === speed
-                        ? 'bg-emerald-500 text-white'
-                        : isDark
-                          ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  {speed}x
-                </button>
-              ))}
-            </div>
-            <div className={`text-xs font-bold transition-colors duration-300 ${
-              isDark ? 'text-emerald-400' : 'text-emerald-600'
-            }`}>
-              {gameState.score.toLocaleString()}
-            </div>
+          {/* Lado Direito - Velocidade */}
+          <div className="flex items-center gap-1">
+            {[1, 2, 4].map((speed) => (
+              <button
+                key={speed}
+                onClick={() => setGameSpeed(speed)}
+                disabled={showPauseScreen}
+                className={`px-2 py-1 rounded text-xs font-bold transition-all duration-200 ${
+                  showPauseScreen 
+                    ? 'opacity-50 cursor-not-allowed' 
+                    : gameState.gameSpeed === speed
+                      ? 'bg-emerald-500 text-white'
+                      : isDark
+                        ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {speed}x
+              </button>
+            ))}
           </div>
         </div>
       </header>
@@ -725,107 +732,152 @@ const MobileGameInterface: React.FC<MobileGameInterfaceProps> = ({ onBack }) => 
           ? 'bg-slate-900/95 border-slate-800' 
           : 'bg-white/95 border-gray-200'
       }`}>
-        <div className="h-full flex flex-col justify-center">
-          <h3 className={`text-sm font-bold mb-3 text-center transition-colors duration-300 ${
-            isDark ? 'text-white' : 'text-gray-900'
-          }`}>
-            Status de Alex
-          </h3>
-          
-          {/* Grid de Fatores - 2 linhas, otimizado para mobile */}
-          <div className="grid grid-cols-3 gap-3 mb-2">
-            {factors.slice(0, 3).map((factor) => {
-              const value = gameState.factors[factor.key as keyof typeof gameState.factors];
-              const IconComponent = factor.icon;
-              
-              return (
-                <div key={factor.key} className="flex flex-col items-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${
-                    isDark ? 'bg-slate-800' : 'bg-gray-100'
-                  }`}>
-                    <IconComponent className={`w-4 h-4 ${
-                      value >= 70 ? 'text-green-500' :
-                      value >= 40 ? 'text-yellow-500' : 'text-red-500'
-                    }`} />
-                  </div>
-                  
-                  <div className="w-full">
-                    <div className={`h-2 rounded-full mb-1 transition-colors duration-300 ${
-                      isDark ? 'bg-slate-800' : 'bg-gray-200'
+        <div className="h-full flex flex-col justify-between">
+          {/* Fatores */}
+          <div className="flex-1">
+            <h3 className={`text-sm font-bold mb-2 text-center transition-colors duration-300 ${
+              isDark ? 'text-white' : 'text-gray-900'
+            }`}>
+              Status de Alex
+            </h3>
+            
+            {/* Grid de Fatores - 2 linhas, otimizado para mobile */}
+            <div className="grid grid-cols-3 gap-2 mb-2">
+              {factors.slice(0, 3).map((factor) => {
+                const value = gameState.factors[factor.key as keyof typeof gameState.factors];
+                const IconComponent = factor.icon;
+                
+                return (
+                  <div key={factor.key} className="flex flex-col items-center">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center mb-1 ${
+                      isDark ? 'bg-slate-800' : 'bg-gray-100'
                     }`}>
-                      <div
-                        className={`h-2 rounded-full transition-all duration-500 ${
-                          value >= 70 ? 'bg-green-500' :
-                          value >= 40 ? 'bg-yellow-500' : 'bg-red-500'
-                        }`}
-                        style={{ width: `${value}%` }}
-                      />
+                      <IconComponent className={`w-3 h-3 ${
+                        value >= 70 ? 'text-green-500' :
+                        value >= 40 ? 'text-yellow-500' : 'text-red-500'
+                      }`} />
                     </div>
                     
-                    <div className="flex items-center justify-between">
-                      <span className={`text-xs font-medium transition-colors duration-300 ${
-                        isDark ? 'text-white' : 'text-gray-900'
+                    <div className="w-full">
+                      <div className={`h-1.5 rounded-full mb-1 transition-colors duration-300 ${
+                        isDark ? 'bg-slate-800' : 'bg-gray-200'
                       }`}>
-                        {factor.name}
-                      </span>
-                      <span className={`text-xs font-bold transition-colors duration-300 ${
-                        isDark ? 'text-white' : 'text-gray-900'
-                      }`}>
-                        {value}%
-                      </span>
+                        <div
+                          className={`h-1.5 rounded-full transition-all duration-500 ${
+                            value >= 70 ? 'bg-green-500' :
+                            value >= 40 ? 'bg-yellow-500' : 'bg-red-500'
+                          }`}
+                          style={{ width: `${value}%` }}
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className={`text-xs font-medium transition-colors duration-300 ${
+                          isDark ? 'text-white' : 'text-gray-900'
+                        }`}>
+                          {factor.name}
+                        </span>
+                        <span className={`text-xs font-bold transition-colors duration-300 ${
+                          isDark ? 'text-white' : 'text-gray-900'
+                        }`}>
+                          {value}%
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+
+            {/* Segunda linha com 2 fatores centralizados */}
+            <div className="grid grid-cols-2 gap-4 max-w-xs mx-auto">
+              {factors.slice(3, 5).map((factor) => {
+                const value = gameState.factors[factor.key as keyof typeof gameState.factors];
+                const IconComponent = factor.icon;
+                
+                return (
+                  <div key={factor.key} className="flex flex-col items-center">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center mb-1 ${
+                      isDark ? 'bg-slate-800' : 'bg-gray-100'
+                    }`}>
+                      <IconComponent className={`w-3 h-3 ${
+                        value >= 70 ? 'text-green-500' :
+                        value >= 40 ? 'text-yellow-500' : 'text-red-500'
+                      }`} />
+                    </div>
+                    
+                    <div className="w-full">
+                      <div className={`h-1.5 rounded-full mb-1 transition-colors duration-300 ${
+                        isDark ? 'bg-slate-800' : 'bg-gray-200'
+                      }`}>
+                        <div
+                          className={`h-1.5 rounded-full transition-all duration-500 ${
+                            value >= 70 ? 'bg-green-500' :
+                            value >= 40 ? 'bg-yellow-500' : 'bg-red-500'
+                          }`}
+                          style={{ width: `${value}%` }}
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className={`text-xs font-medium transition-colors duration-300 ${
+                          isDark ? 'text-white' : 'text-gray-900'
+                        }`}>
+                          {factor.name}
+                        </span>
+                        <span className={`text-xs font-bold transition-colors duration-300 ${
+                          isDark ? 'text-white' : 'text-gray-900'
+                        }`}>
+                          {value}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Segunda linha com 2 fatores centralizados */}
-          <div className="grid grid-cols-2 gap-6 max-w-xs mx-auto">
-            {factors.slice(3, 5).map((factor) => {
-              const value = gameState.factors[factor.key as keyof typeof gameState.factors];
-              const IconComponent = factor.icon;
-              
-              return (
-                <div key={factor.key} className="flex flex-col items-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${
-                    isDark ? 'bg-slate-800' : 'bg-gray-100'
-                  }`}>
-                    <IconComponent className={`w-4 h-4 ${
-                      value >= 70 ? 'text-green-500' :
-                      value >= 40 ? 'text-yellow-500' : 'text-red-500'
-                    }`} />
-                  </div>
-                  
-                  <div className="w-full">
-                    <div className={`h-2 rounded-full mb-1 transition-colors duration-300 ${
-                      isDark ? 'bg-slate-800' : 'bg-gray-200'
-                    }`}>
-                      <div
-                        className={`h-2 rounded-full transition-all duration-500 ${
-                          value >= 70 ? 'bg-green-500' :
-                          value >= 40 ? 'bg-yellow-500' : 'bg-red-500'
-                        }`}
-                        style={{ width: `${value}%` }}
-                      />
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className={`text-xs font-medium transition-colors duration-300 ${
-                        isDark ? 'text-white' : 'text-gray-900'
-                      }`}>
-                        {factor.name}
-                      </span>
-                      <span className={`text-xs font-bold transition-colors duration-300 ${
-                        isDark ? 'text-white' : 'text-gray-900'
-                      }`}>
-                        {value}%
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+          {/* Controles Inferiores */}
+          <div className="flex justify-end items-center gap-2 pt-2">
+            <button
+              onClick={handleMuteToggle}
+              className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${
+                isDark 
+                  ? 'hover:bg-slate-800 text-emerald-400' 
+                  : 'hover:bg-gray-100 text-emerald-600'
+              }`}
+              title={audioSettings.isMuted ? "Ativar Som" : "Mutar Som"}
+            >
+              {audioSettings.isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            </button>
+            
+            <button
+              onClick={saveGame}
+              disabled={showPauseScreen}
+              className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${
+                showPauseScreen 
+                  ? 'opacity-50 cursor-not-allowed' 
+                  : isDark 
+                    ? 'hover:bg-slate-800 text-emerald-400' 
+                    : 'hover:bg-gray-100 text-emerald-600'
+              }`}
+              title="Salvar Jogo"
+            >
+              <Save className="w-4 h-4" />
+            </button>
+            
+            <button
+              onClick={resetGame}
+              className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${
+                isDark 
+                  ? 'hover:bg-slate-800 text-orange-400' 
+                  : 'hover:bg-gray-100 text-orange-600'
+              }`}
+              title="Resetar Jogo"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </footer>
